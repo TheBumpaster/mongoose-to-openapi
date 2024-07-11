@@ -1,6 +1,5 @@
 import { PathsObject } from 'openapi3-ts/oas31';
 import createOpenAPIFactory from '../index'; // Adjust the import path as necessary
-import { Schema } from 'mongoose';
 
 // Mock necessary parts
 jest.mock('glob', () => ({
