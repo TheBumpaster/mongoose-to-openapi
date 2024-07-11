@@ -1,4 +1,3 @@
-import { SchemaObject } from 'openapi3-ts/oas31';
 import createOpenAPIFactory from '../index'; // Adjust the import path as necessary
 
 // Mock necessary parts

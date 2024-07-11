@@ -9,8 +9,6 @@ export interface OpenAPIFactoryConfig {
 	schemaNameCallback?: (filePath: string) => string;
 }
 
-
-
 export class OpenAPIFactory {
 	public openAPI: OpenAPIObject = {
 		openapi: '3.1.0',
@@ -184,6 +182,5 @@ const createOpenAPIFactory = ({ info, schemaPattern, schemaNameCallback }: OpenA
 		init: factory.init
 	}
 };
-
 
 export default createOpenAPIFactory
