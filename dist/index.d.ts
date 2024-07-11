@@ -2,11 +2,14 @@ import { OpenAPIObject, PathItemObject, OperationObject, InfoObject, PathObject 
 export interface OpenAPIFactoryConfig {
     info: InfoObject;
     schemaPattern: string;
+    schemaNameCallback?: (filePath: string) => string;
 }
 export declare class OpenAPIFactory {
-    schemaPattern: string;
     openAPI: OpenAPIObject;
-    constructor(info: InfoObject, schemaPattern: string);
+    private schemas;
+    private schemaPattern;
+    private schemaNameCallback;
+    constructor(info: InfoObject, schemaPattern: string, schemaNameCallback?: OpenAPIFactoryConfig["schemaNameCallback"]);
     init: () => this;
     addRoute: (path: string, method: keyof PathItemObject, operation: OperationObject) => void;
     addRoutes: (...routes: PathObject[]) => void;
@@ -16,7 +19,7 @@ export declare class OpenAPIFactory {
     private loadSchemas;
     private generateOpenAPIComponents;
 }
-declare const createOpenAPIFactory: ({ info, schemaPattern }: OpenAPIFactoryConfig) => {
+declare const createOpenAPIFactory: ({ info, schemaPattern, schemaNameCallback }: OpenAPIFactoryConfig) => {
     getOpenAPI: () => OpenAPIObject;
     addRoute: (path: string, method: keyof PathItemObject, operation: OperationObject) => void;
     addRoutes: (...routes: PathObject[]) => void;

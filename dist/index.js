@@ -5,7 +5,7 @@ const path_1 = require("path");
 const glob_1 = require("glob");
 const mongoose_1 = require("mongoose");
 class OpenAPIFactory {
-    constructor(info, schemaPattern) {
+    constructor(info, schemaPattern, schemaNameCallback) {
         this.openAPI = {
             openapi: '3.1.0',
             info: { title: "OpenAPIFactory", version: "1.0.0" },
@@ -14,6 +14,7 @@ class OpenAPIFactory {
                 schemas: {}
             }
         };
+        this.schemas = {};
         this.init = () => {
             const schemas = this.loadSchemas(this.schemaPattern);
             this.openAPI.components.schemas = this.generateOpenAPIComponents(schemas).schemas;
@@ -73,24 +74,33 @@ class OpenAPIFactory {
             const paths = mongooseSchema.paths;
             const openAPISchema = { type: 'object', properties: {}, required: [] };
             Object.keys(paths).forEach((path) => {
-                const schemaType = paths[path].instance;
+                const schemaPath = paths[path];
+                const schemaType = schemaPath.instance;
                 const isRequired = mongooseSchema.requiredPaths().includes(path);
+                const ref = schemaPath.options.ref;
                 if (schemaType === "Array") {
+                    const arrayType = schemaPath.options.type[0];
                     let arrayItems = undefined;
-                    const arrayType = paths[path].options.type[0];
-                    if (arrayType instanceof mongoose_1.Schema) {
-                        arrayItems = this.convertSchema(arrayType);
+                    const arrayRef = schemaPath.options.type[0].ref;
+                    if (arrayRef) {
+                        arrayItems = { $ref: `#/components/schemas/${arrayRef}` };
                     }
-                    else if (arrayType.type instanceof mongoose_1.Schema) {
-                        arrayItems = this.convertSchema(arrayType.type);
+                    else {
+                        if (arrayType instanceof mongoose_1.Schema) {
+                            arrayItems = this.convertSchema(arrayType);
+                        }
+                        else if (arrayType.type instanceof mongoose_1.Schema) {
+                            arrayItems = this.convertSchema(arrayType.type);
+                        }
                     }
                     openAPISchema.properties[path] = {
                         type: 'array',
                         items: arrayItems
                     };
                 }
-                else if (schemaType === 'Embedded') {
-                    openAPISchema.properties[path] = this.convertSchema(paths[path].schema);
+                else if (ref) {
+                    // Handle direct references to other schemas
+                    openAPISchema.properties[path] = { $ref: `#/components/schemas/${ref}` };
                 }
                 else {
                     openAPISchema.properties[path] = {
@@ -104,18 +114,17 @@ class OpenAPIFactory {
             return openAPISchema;
         };
         this.loadSchemas = (pattern) => {
-            const schemas = {};
             (0, glob_1.sync)(pattern).forEach((file) => {
                 try {
                     const schemaModule = require((0, path_1.resolve)(file));
-                    const schemaName = (0, path_1.basename)(file, (0, path_1.extname)(file));
-                    schemas[schemaName] = schemaModule.default;
+                    const schemaName = this.schemaNameCallback ? this.schemaNameCallback(file) : (0, path_1.basename)(file, (0, path_1.extname)(file));
+                    this.schemas[schemaName] = schemaModule.default;
                 }
                 catch (error) {
                     console.error(`Failed to load schema from file: ${file}`, error);
                 }
             });
-            return schemas;
+            return this.schemas;
         };
         this.generateOpenAPIComponents = (schemas) => {
             const components = { schemas: {} };
@@ -126,11 +135,14 @@ class OpenAPIFactory {
         };
         this.openAPI.info = info;
         this.schemaPattern = schemaPattern;
+        if (schemaNameCallback) {
+            this.schemaNameCallback = schemaNameCallback;
+        }
     }
 }
 exports.OpenAPIFactory = OpenAPIFactory;
-const createOpenAPIFactory = ({ info, schemaPattern }) => {
-    const factory = new OpenAPIFactory(info, schemaPattern);
+const createOpenAPIFactory = ({ info, schemaPattern, schemaNameCallback }) => {
+    const factory = new OpenAPIFactory(info, schemaPattern, schemaNameCallback);
     return {
         getOpenAPI: factory.getOpenAPI,
         addRoute: factory.addRoute,
